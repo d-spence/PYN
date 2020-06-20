@@ -93,7 +93,7 @@ def backup_notes(filename=csv_bak_filename):
 def add_note():
     os.system('cls')
     print(title)
-    print("Create a new PYN...")
+    print("Create a new note...")
     content = input(prompt)
 
     print("Enter a category (default: general)...")
@@ -107,29 +107,29 @@ def add_note():
     pyn_notes.append(Note(hex_id, date, category, content))
 
     # Return a status message
-    return f"Created new PYN with ID '{hex_id}' in '{category}' category"
+    return f"Created new note with ID '{hex_id}' in '{category}' category"
     
 
 # Delete a note and save to file
 def del_note():
     # Call with kwarg to skip pressing ENTER
-    disp_notes(enter=False)
+    view_notes(enter=False)
     
-    print("Select PYN # to delete...")
+    print("Select note # to delete...")
     try:
         note_index = int(input(prompt)) - 1 # Subtract one due to display diff
 
         if 0 <= note_index < len(pyn_notes):
             if del_note_confirm(note_index):
                 del pyn_notes[note_index]
-                return f"PYN {note_index + 1} was deleted..."
+                return f"Note {note_index + 1} was deleted..."
     except Exception:
-        return "Could not delete PYN. Please use a valid index."
+        return "Could not delete note. Please use a valid index."
 
 
 # Confirm the deletion of a note
 def del_note_confirm(note_index):
-    print(f"Are you sure you want to delete PYN {note_index + 1}? (yes or no)")
+    print(f"Are you sure you want to delete note {note_index + 1}? (yes or no)")
     confirm = input(prompt)
 
     if confirm.lower() in ['y', 'yes']:
@@ -140,9 +140,9 @@ def del_note_confirm(note_index):
 
 # Edit an existing note
 def edit_note():
-    disp_notes(enter=False)
+    view_notes(enter=False)
 
-    print("Select PYN # to edit...")
+    print("Select note # to edit...")
     try:
         note_index = int(input(prompt)) - 1 # Subtract one due to display diff
 
@@ -150,33 +150,45 @@ def edit_note():
             print(f"Current Text: {pyn_notes[note_index].content}")
             edit_text = input(prompt)
             if edit_text == '':
-                return f"PYN {note_index} was NOT modified..."
+                return f"Note {note_index} was NOT modified..."
 
             pyn_notes[note_index].content = edit_text
-            return f"PYN {note_index} was modified!"
+            return f"Note {note_index} was modified!"
     except Exception:
-        return "Could not edit PYN. Please use a valid index."
+        return "Could not edit note. Please use a valid index."
 
 
 # Display all saved notes; Returns a list of note IDs
-def disp_notes(verbose=False, enter=True):
+def disp_notes(enter=True):
     os.system('cls')
     print(title)
-    print("Displaying all PYNs...\n")
+    print("Displaying all notes...\n")
 
     hex_id, date, category, content = csv_fieldnames
-    if verbose == False:
-        print(f"#   {category.title():12} {content.title()}")
+    print(f"#   {hex_id.upper():10}{date.title():16}{category.title():12} "
+        f"{content.title()}")
 
-        for pos, note in enumerate(pyn_notes):
+    for pos, note in enumerate(pyn_notes):
+        print(f"{str(pos+1):<4}{note.hex_id:10}{note.date:16}"
+            f"<{note.category+'>':12}'{note.content}'")
+
+    # Press enter to exit function and return to main loop
+    if enter == True:
+        input("Press ENTER to continue...")
+
+
+# View notes in a basic manner and by category if given
+def view_notes(enter=True, cat='all'):
+    os.system('cls')
+    print(title)
+    print(f"Viewing notes (category: {cat})...\n")
+
+    _, _, category, content = csv_fieldnames # _ values are not used
+    print(f"#   {category.title():12} {content.title()}")
+
+    for pos, note in enumerate(pyn_notes):
+        if cat == 'all' or cat.lower() == note.category:
             print(f"{str(pos+1):<4}<{note.category+'>':12}'{note.content}'")
-    elif verbose == True:
-        print(f"#   {hex_id.upper():10}{date.title():16}{category.title():12} "
-            f"{content.title()}")
-
-        for pos, note in enumerate(pyn_notes):
-            print(f"{str(pos+1):<4}{note.hex_id:10}{note.date:16}"
-                f"<{note.category+'>':12}'{note.content}'")
 
     # Press enter to exit function and return to main loop
     if enter == True:
@@ -184,14 +196,14 @@ def disp_notes(verbose=False, enter=True):
 
 
 cmd_dict = {
-    'help': 'Display all available commands  (alt: h)',
-    'add':  'Create a new PYN                (alt: a, new)',
-    'del':  'Delete an existing PYN          (alt: x, delete)',
-    'edit': 'Edit an existing PYN            (alt: e)',
-    'save': 'Save notes to csv file          (alt: s)',
-    'view': 'View basic info of saved PYNs   (alt: v)',
-    'disp': 'Display all info for saved PYNs (alt: d, display)',
-    'exit': 'Exit Python Notes               (alt: q, quit)'
+    'help': 'Display all available commands   (alt: h)',
+    'add':  'Create a new note                (alt: a, new)',
+    'del':  'Delete an existing note          (alt: x, delete)',
+    'edit': 'Edit an existing note            (alt: e)',
+    'save': 'Save notes to csv file           (alt: s)',
+    'view': 'View basic info of saved notes   (alt: v <category>)',
+    'disp': 'Display all info for saved notes (alt: d, display)',
+    'exit': 'Exit Python Notes                (alt: q, quit)'
     }
 
 pyn_notes = load_notes() # This is where we load our notes into memory
@@ -207,6 +219,15 @@ while True:
     command = input(prompt) # Get a command from user
     status = None # Reset status msg
 
+    # Check if command has multiple arguments
+    if len(command.split()) > 1:
+        command = command.split()
+
+        if command[0].lower() in ['view', 'v'] and len(command) == 2:
+            view_notes(cat=command[1])
+            continue
+
+    # Otherwise use standard single commands
     if command.lower() in ['help', 'h']:
         for cmd, desc in cmd_dict.items():
             print(f"{cmd.upper() + ':':<8}{desc}")
@@ -220,9 +241,9 @@ while True:
     elif command.lower() in ['save', 's']:
         status = save_notes(backup_on_save=True)
     elif command.lower() in ['view', 'v']:
-        disp_notes()
+        view_notes()
     elif command.lower() in ['disp', 'd', 'display']:
-        disp_notes(verbose=True)
+        disp_notes()
     elif command.lower() in ['exit', 'quit', 'q']:
         if backup_on_exit == True:
             print("Backing up notes...")
