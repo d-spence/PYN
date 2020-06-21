@@ -1,12 +1,13 @@
-# Python Notes (PYN)
+#  //)) \\// /| // Python
+# //     // //|//  Notes
+#
 # Simple and fast notetaking app for remembering things
 # Created by Dan Spencer (2020)
-
-# TODO --> Add ability to display only notes in a certain category
 
 import os, sys, csv
 from secrets import token_hex
 from datetime import datetime
+from textwrap import wrap
 
 
 csv_filename = './pynotes.csv'
@@ -17,8 +18,12 @@ csv_fieldnames = ['id', 'date', 'category', 'content']
 
 autosave = True
 backup_on_exit = True
+auto_view_notes = True # Notes are displayed automatically
 
-title = "Python Notes (PYN)"
+title = r"""  
+ //)) \\// /| // Python
+//     // //|//  Notes
+"""
 status = None # Initial status message
 prompt = '>>> '
 
@@ -150,16 +155,16 @@ def edit_note():
             print(f"Current Text: {pyn_notes[note_index].content}")
             edit_text = input(prompt)
             if edit_text == '':
-                return f"Note {note_index} was NOT modified..."
+                return f"Note {note_index} was not modified..."
 
             pyn_notes[note_index].content = edit_text
-            return f"Note {note_index} was modified!"
+            return f"Note {note_index} was modified successfully!"
     except Exception:
         return "Could not edit note. Please use a valid index."
 
 
 # Display all saved notes; Returns a list of note IDs
-def disp_notes(enter=True):
+def disp_notes(enter=True, newlines=True):
     os.system('cls')
     print(title)
     print("Displaying all notes...\n")
@@ -168,17 +173,30 @@ def disp_notes(enter=True):
     print(f"#   {hex_id.upper():10}{date.title():16}{category.title():12} "
         f"{content.title()}")
 
-    for pos, note in enumerate(pyn_notes):
-        print(f"{str(pos+1):<4}{note.hex_id:10}{note.date:16}"
-            f"<{note.category+'>':12}'{note.content}'")
+    for pos, note in enumerate(pyn_notes, start=1):
+        # Split note into list using textwrap.wrap function
+        split_note = wrap(note.content, width=70)
+
+        print(f"{str(pos):<4}{note.hex_id:10}{note.date:16}"
+            f"<{note.category+'>':12}", end='')
+        for pos, line in enumerate(split_note):
+            if pos == 0:
+                print(f"'{line}'")
+            else:
+                print(f"{' ' * 43}'{line}'")
+
+        if newlines == True:
+            print() # Add a newline between notes
 
     # Press enter to exit function and return to main loop
     if enter == True:
         input("Press ENTER to continue...")
 
 
-# View notes in a basic manner and by category if given
-def view_notes(enter=True, cat='all'):
+# View notes in a basic manner
+# enter: wait for user to press ENTER, cat: view only select category
+# limit: how many notes to view, pad: pad with '\n' to match height of limit
+def view_notes(enter=True, cat='all', limit=200):
     os.system('cls')
     print(title)
     print(f"Viewing notes (category: {cat})...\n")
@@ -186,10 +204,16 @@ def view_notes(enter=True, cat='all'):
     _, _, category, content = csv_fieldnames # _ values are not used
     print(f"#   {category.title():12} {content.title()}")
 
-    for pos, note in enumerate(pyn_notes):
+    for pos, note in enumerate(pyn_notes, start=1):
         if cat == 'all' or cat.lower() == note.category:
-            print(f"{str(pos+1):<4}<{note.category+'>':12}'{note.content}'")
+            print(f"{str(pos):<4}<{note.category+'>':12}'{note.content}'")
 
+        # Display limit for notes
+        if pos == limit:
+            print(f"Displaying first {limit} notes ({pyn_notes_num - limit} remaining)")
+            break
+
+    print() # Blank line
     # Press enter to exit function and return to main loop
     if enter == True:
         input("Press ENTER to continue...")
@@ -212,12 +236,20 @@ pyn_notes = load_notes() # This is where we load our notes into memory
 while True:
     os.system('cls') # Clear the screen
     print(title)
+
+    pyn_notes_num = len(pyn_notes) # Number of notes in total
+
+    # View notes automatically
+    if auto_view_notes == True:
+        view_notes(enter=False, limit=20)
+
     # Use a default status message that displays help text
     if status == None:
         status = "Enter a command. Type HELP for a list of commands."
     print(f"Status: {status}")
-    command = input(prompt) # Get a command from user
     status = None # Reset status msg
+
+    command = input(prompt) # Get a command from user
 
     # Check if command has multiple arguments
     if len(command.split()) > 1:
@@ -226,8 +258,10 @@ while True:
         if command[0].lower() in ['view', 'v'] and len(command) == 2:
             view_notes(cat=command[1])
             continue
+        else:
+            status = "The command or number of arguments given was invalid."
 
-    # Otherwise use standard single commands
+    # Otherwise use standard single argument commands
     if command.lower() in ['help', 'h']:
         for cmd, desc in cmd_dict.items():
             print(f"{cmd.upper() + ':':<8}{desc}")
