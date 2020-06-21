@@ -72,7 +72,8 @@ def load_notes():
         for note in reader:
             notes.append(Note(note['id'], note['date'], note['category'],
                          note['content']))
-            cat_list.append(note['category'].lower()) # Fill category list
+            if note['category'].lower() not in cat_list:
+                cat_list.append(note['category'].lower()) # Fill category list
 
     return notes
 
@@ -111,9 +112,7 @@ def add_note(sort_on_add=True):
     
     sort_on_add: bool: Sorts notes by date if true"""
 
-    os.system('cls')
-    print(title)
-    print("Create a new note...")
+    clear_disp("Create a new note...")
 
     content = input(prompt)
     category = cat_note()
@@ -127,7 +126,7 @@ def add_note(sort_on_add=True):
         sort_notes() # Sort list of notes
 
     # Return a status message
-    return f"Created new note with ID '{hex_id}' in '{category}' category"
+    return f"Created new note in '{category}' category with ID '{hex_id}'"
     
 
 def del_note():
@@ -143,6 +142,8 @@ def del_note():
             if del_note_confirm(note_index):
                 del pyn_notes[note_index]
                 return f"Note {note_index + 1} was deleted..."
+            else:
+                raise Exception
     except Exception:
         return "Could not delete note. Please use a valid index."
 
@@ -150,7 +151,7 @@ def del_note():
 def del_note_confirm(note_index):
     """Confirm the deletion of a note."""
 
-    print(f"Are you sure you want to delete note {note_index + 1}? (yes or no)")
+    print(f"\nAre you sure you want to delete note {note_index + 1}? (yes or no)")
     confirm = input(prompt)
 
     if confirm.lower() in ['y', 'yes']:
@@ -169,15 +170,19 @@ def edit_note():
         note_index = int(input(prompt)) - 1 # Subtract one due to display diff
 
         if 0 <= note_index < len(pyn_notes):
-            print(f"Current Text: {pyn_notes[note_index].content}")
+            clear_disp(f"Current text: {pyn_notes[note_index].content}")
+
             edit_text = input(prompt)
             if edit_text == '':
                 edit_text = pyn_notes[note_index].content # Use current text
+
             # Edit note category
             edit_cat = cat_note()
+
             # Update note object
             pyn_notes[note_index].content = edit_text
             pyn_notes[note_index].category = edit_cat
+
             return f"Note {note_index} was modified successfully!"
     except Exception:
         return "Could not edit note. Please use a valid index."
@@ -188,13 +193,17 @@ def cat_note(cat_confirm=True):
     
     cat_confirm: bool: Confirms the creation of a new category"""
 
-    print("Enter a category (default: general)...")
+    print("\nEnter a category (default: general)...")
+    print("Category list: ", end='')
+    print(*cat_list, sep=', ')
+
     category = input(prompt).lower() # Convert to lower-case
     if category == '':
         category = 'general'
     # Confirm creation of category if it does not already exist
     elif category not in cat_list and cat_confirm == True:
-        print("Category does not exist. Would you like to create it?")
+        print("\nCategory does not exist. Would you like to create it?")
+        
         if input(prompt).lower() in ['y', 'yes']:
             cat_list.append(category)
         else:
@@ -209,20 +218,18 @@ def disp_notes(enter=True, newlines=True):
     enter: bool: wait for user to press ENTER
     newlines: bool: print newlines between notes"""
 
-    os.system('cls')
-    print(title)
-    print("Displaying all notes\n")
+    clear_disp("Displaying all notes")
 
     hex_id, date, category, content = csv_fieldnames
     print(f"#   {hex_id.upper():10}{date.title():16}{category.title():15} "
-        f"{content.title()}")
+          f"{content.title()}")
 
     for pos, note in enumerate(pyn_notes, start=1):
         # Split note into list using textwrap.wrap function
         split_note = wrap(note.content, width=70)
 
         print(f"{str(pos):<4}{note.hex_id:10}{note.date:16}"
-            f"<{note.category+'>':15}", end='')
+              f"<{note.category+'>':15}", end='')
         for pos, line in enumerate(split_note):
             if pos == 0:
                 print(f"'{line}'")
@@ -237,12 +244,13 @@ def disp_notes(enter=True, newlines=True):
         input("Press ENTER to continue...")
 
 
-# View notes in a basic manner
-# cat: view only select category, limit: how many notes to view
 def view_notes(enter=True, cat='all', limit=200):
-    os.system('cls')
-    print(title)
-    print(f"Viewing notes (category: {cat})\n")
+    """View notes in a basic manner
+    
+    cat: str: View only select category
+    limit: int: How many notes to view"""
+    
+    clear_disp(f"Viewing notes (category: {cat})")
 
     _, _, category, content = csv_fieldnames # _ values are not used
     print(f"#   {category.title():15} {content.title()}")
@@ -285,12 +293,18 @@ def sort_notes(sort_by=default_sort):
     return f"Notes have been sorted by {sort_by}!"
 
 
-def pyn_help():
-    """Display the list of commands."""
+def clear_disp(msg):
+    """Clear the display. Then show title and a message."""
 
     os.system('cls')
     print(title)
-    print("Command list\n")
+    print(msg, '\n')
+
+
+def pyn_help():
+    """Display the list of commands."""
+
+    clear_disp('Command list')
 
     cmd_dict = {
         'help': 'Display all available commands   (alt: h)',
