@@ -20,6 +20,7 @@ csv_fieldnames = ['id', 'date', 'category', 'content']
 autosave = True
 backup_on_exit = True
 auto_view_notes = True # Notes are displayed automatically
+default_sort = 'date' # The method of sorting on startup and when adding a note
 exit_delay = 1.5
 
 title = r"""  
@@ -31,6 +32,10 @@ prompt = '>>> '
 
 
 class Note:
+    """Contains information about a note.
+
+    Designed to be loaded from a csv file and store in a list with other
+    Note objects using load_notes function."""
 
     def __init__(self, hex_id, date, category, content):
         self.hex_id = hex_id
@@ -55,8 +60,10 @@ if not os.path.exists(csv_bak_dir):
     os.mkdir(csv_bak_dir)
 
 
-# Load notes from csv file as Note class-objects; Returns list of Note objects
 def load_notes():
+    """Load notes from csv file as Note class-objects.
+        Returns list of Note objects."""
+
     notes = []
     with open(csv_filename, 'r') as csvfile:
         reader = csv.DictReader(csvfile, fieldnames=csv_fieldnames)
@@ -70,8 +77,9 @@ def load_notes():
     return notes
 
 
-# Save notes to csv file; Use filename kwarg to save to another file
 def save_notes(filename=csv_filename, backup_on_save=False):
+    """Save notes to csv file; Use filename kwarg to save to another file."""
+
     if backup_on_save == True:
         backup_notes() # Backup notes when saving manually
 
@@ -87,8 +95,9 @@ def save_notes(filename=csv_filename, backup_on_save=False):
     return "Changes to notes have been saved!"
 
 
-# Backup notes to a separate file; Use filename kwarg to save to another file
 def backup_notes(filename=csv_bak_filename):
+    """Backup notes to a separate file."""
+
     with open(csv_filename, 'r') as csvfile:
             with open(filename, 'w') as csvbakfile:
                 for row in csvfile:
@@ -97,26 +106,34 @@ def backup_notes(filename=csv_bak_filename):
     return "Backup complete!"
 
 
-# Add a new note and save to file
-def add_note():
+def add_note(sort_on_add=True):
+    """Create a new note object.
+    
+    sort_on_add: bool: Sorts notes by date if true"""
+
     os.system('cls')
     print(title)
     print("Create a new note...")
+
     content = input(prompt)
     category = cat_note()
     hex_id = token_hex(4)
     date = datetime.today().strftime("%m-%d-%y %H:%M")
+
     # Create a new Note obj and add to pyn_notes list
     pyn_notes.append(Note(hex_id, date, category, content))
+
+    if sort_on_add == True:
+        sort_notes() # Sort list of notes
 
     # Return a status message
     return f"Created new note with ID '{hex_id}' in '{category}' category"
     
 
-# Delete a note and save to file
 def del_note():
-    # Call with kwarg to skip pressing ENTER
-    view_notes(enter=False)
+    """Delete an existing note."""
+
+    view_notes(enter=False) # Call with arg to skip pressing ENTER
     
     print("Select note # to delete...")
     try:
@@ -130,8 +147,9 @@ def del_note():
         return "Could not delete note. Please use a valid index."
 
 
-# Confirm the deletion of a note
 def del_note_confirm(note_index):
+    """Confirm the deletion of a note."""
+
     print(f"Are you sure you want to delete note {note_index + 1}? (yes or no)")
     confirm = input(prompt)
 
@@ -141,8 +159,9 @@ def del_note_confirm(note_index):
         return False
 
 
-# Edit an existing note
 def edit_note():
+    """Edit an existing note."""
+
     view_notes(enter=False)
 
     print("Select note # to edit...")
@@ -164,8 +183,11 @@ def edit_note():
         return "Could not edit note. Please use a valid index."
 
 
-# Set the category for a note
 def cat_note(cat_confirm=True):
+    """Set the category for a note.
+    
+    cat_confirm: bool: Confirms the creation of a new category"""
+
     print("Enter a category (default: general)...")
     category = input(prompt).lower() # Convert to lower-case
     if category == '':
@@ -177,15 +199,19 @@ def cat_note(cat_confirm=True):
             cat_list.append(category)
         else:
             category = 'general'
+
     return category
 
 
-# Display all saved notes; Returns a list of note IDs
-# enter: wait for user to press ENTER, newlines: print newlines between notes
 def disp_notes(enter=True, newlines=True):
+    """Display all saved notes.
+
+    enter: bool: wait for user to press ENTER
+    newlines: bool: print newlines between notes"""
+
     os.system('cls')
     print(title)
-    print("Displaying all notes...\n")
+    print("Displaying all notes\n")
 
     hex_id, date, category, content = csv_fieldnames
     print(f"#   {hex_id.upper():10}{date.title():16}{category.title():15} "
@@ -216,7 +242,7 @@ def disp_notes(enter=True, newlines=True):
 def view_notes(enter=True, cat='all', limit=200):
     os.system('cls')
     print(title)
-    print(f"Viewing notes (category: {cat})...\n")
+    print(f"Viewing notes (category: {cat})\n")
 
     _, _, category, content = csv_fieldnames # _ values are not used
     print(f"#   {category.title():15} {content.title()}")
@@ -244,6 +270,21 @@ def view_notes(enter=True, cat='all', limit=200):
         input("Press ENTER to continue...")
 
 
+def sort_notes(sort_by=default_sort):
+    """Sorts the list of note objects. Requires the pyn_notes global list.
+
+    sort_by: str: default is default_sort which is a global variable"""
+
+    if sort_by == 'date':
+        pyn_notes.sort(key=lambda x: x.date, reverse=True)
+    elif sort_by == 'category':
+        pyn_notes.sort(key=lambda x: x.category, reverse=False)
+    else:
+        return f"Notes could not be sorted by '{sort_by}'..."
+
+    return f"Notes have been sorted by {sort_by}!"
+
+
 cmd_dict = {
     'help': 'Display all available commands   (alt: h)',
     'add':  'Create a new note                (alt: a, new)',
@@ -252,11 +293,13 @@ cmd_dict = {
     'save': 'Save notes to csv file           (alt: s)',
     'view': 'View basic info of saved notes   (alt: v <category>)',
     'disp': 'Display all info for saved notes (alt: d, display)',
+    'sort': 'Sort notes by date or category   (alt: o <sort_by>',
     'exit': 'Exit Python Notes                (alt: q, quit)'
     }
 
 cat_list = [] # List of categories
 pyn_notes = load_notes() # This is where we load our notes into memory
+sort_notes() # Sort list of notes by default setting
 
 # MAIN LOOP ====================================================================
 while True:
@@ -283,12 +326,13 @@ while True:
 
         if command[0].lower() in ['view', 'v'] and len(command) == 2:
             view_notes(cat=command[1])
-            continue
+        elif command[0].lower() in ['sort', 'o'] and len(command) == 2:
+            status = sort_notes(sort_by=command[1])
         else:
             status = "The command or number of arguments given was invalid."
 
     # Otherwise use standard single argument commands
-    if command.lower() in ['help', 'h']:
+    elif command.lower() in ['help', 'h']:
         for cmd, desc in cmd_dict.items():
             print(f"{cmd.upper() + ':':<8}{desc}")
         input("Press ENTER to continue...") # Wait for user to press Enter key
@@ -304,6 +348,8 @@ while True:
         view_notes()
     elif command.lower() in ['disp', 'd', 'display']:
         disp_notes()
+    elif command.lower() in ['sort', 'o']:
+        status = sort_notes()
     elif command.lower() in ['exit', 'quit', 'q']:
         if backup_on_exit == True:
             print("Backing up notes...")
