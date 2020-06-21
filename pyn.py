@@ -8,6 +8,7 @@ import os, sys, csv
 from secrets import token_hex
 from datetime import datetime
 from textwrap import wrap
+from time import sleep
 
 
 csv_filename = './pynotes.csv'
@@ -19,6 +20,7 @@ csv_fieldnames = ['id', 'date', 'category', 'content']
 autosave = True
 backup_on_exit = True
 auto_view_notes = True # Notes are displayed automatically
+exit_delay = 1.5
 
 title = r"""  
  //)) \\// /| // Python
@@ -63,6 +65,7 @@ def load_notes():
         for note in reader:
             notes.append(Note(note['id'], note['date'], note['category'],
                          note['content']))
+            cat_list.append(note['category'].lower()) # Fill category list
 
     return notes
 
@@ -70,7 +73,7 @@ def load_notes():
 # Save notes to csv file; Use filename kwarg to save to another file
 def save_notes(filename=csv_filename, backup_on_save=False):
     if backup_on_save == True:
-        backup_notes()
+        backup_notes() # Backup notes when saving manually
 
     with open(filename, 'w', newline='') as csvfile:
         writer = csv.DictWriter(csvfile, fieldnames=csv_fieldnames)
@@ -100,12 +103,7 @@ def add_note():
     print(title)
     print("Create a new note...")
     content = input(prompt)
-
-    print("Enter a category (default: general)...")
-    category = input(prompt).lower() # Convert to lower-case
-    if category == '': 
-        category = 'general'
-
+    category = cat_note()
     hex_id = token_hex(4)
     date = datetime.today().strftime("%m-%d-%y %H:%M")
     # Create a new Note obj and add to pyn_notes list
@@ -155,22 +153,42 @@ def edit_note():
             print(f"Current Text: {pyn_notes[note_index].content}")
             edit_text = input(prompt)
             if edit_text == '':
-                return f"Note {note_index} was not modified..."
-
+                edit_text = pyn_notes[note_index].content # Use current text
+            # Edit note category
+            edit_cat = cat_note()
+            # Update note object
             pyn_notes[note_index].content = edit_text
+            pyn_notes[note_index].category = edit_cat
             return f"Note {note_index} was modified successfully!"
     except Exception:
         return "Could not edit note. Please use a valid index."
 
 
+# Set the category for a note
+def cat_note(cat_confirm=True):
+    print("Enter a category (default: general)...")
+    category = input(prompt).lower() # Convert to lower-case
+    if category == '':
+        category = 'general'
+    # Confirm creation of category if it does not already exist
+    elif category not in cat_list and cat_confirm == True:
+        print("Category does not exist. Would you like to create it?")
+        if input(prompt).lower() in ['y', 'yes']:
+            cat_list.append(category)
+        else:
+            category = 'general'
+    return category
+
+
 # Display all saved notes; Returns a list of note IDs
+# enter: wait for user to press ENTER, newlines: print newlines between notes
 def disp_notes(enter=True, newlines=True):
     os.system('cls')
     print(title)
     print("Displaying all notes...\n")
 
     hex_id, date, category, content = csv_fieldnames
-    print(f"#   {hex_id.upper():10}{date.title():16}{category.title():12} "
+    print(f"#   {hex_id.upper():10}{date.title():16}{category.title():15} "
         f"{content.title()}")
 
     for pos, note in enumerate(pyn_notes, start=1):
@@ -178,12 +196,12 @@ def disp_notes(enter=True, newlines=True):
         split_note = wrap(note.content, width=70)
 
         print(f"{str(pos):<4}{note.hex_id:10}{note.date:16}"
-            f"<{note.category+'>':12}", end='')
+            f"<{note.category+'>':15}", end='')
         for pos, line in enumerate(split_note):
             if pos == 0:
                 print(f"'{line}'")
             else:
-                print(f"{' ' * 43}'{line}'")
+                print(f"{' ' * 46}'{line}'") # Pad with spaces
 
         if newlines == True:
             print() # Add a newline between notes
@@ -194,19 +212,26 @@ def disp_notes(enter=True, newlines=True):
 
 
 # View notes in a basic manner
-# enter: wait for user to press ENTER, cat: view only select category
-# limit: how many notes to view, pad: pad with '\n' to match height of limit
+# cat: view only select category, limit: how many notes to view
 def view_notes(enter=True, cat='all', limit=200):
     os.system('cls')
     print(title)
     print(f"Viewing notes (category: {cat})...\n")
 
     _, _, category, content = csv_fieldnames # _ values are not used
-    print(f"#   {category.title():12} {content.title()}")
+    print(f"#   {category.title():15} {content.title()}")
 
     for pos, note in enumerate(pyn_notes, start=1):
         if cat == 'all' or cat.lower() == note.category:
-            print(f"{str(pos):<4}<{note.category+'>':12}'{note.content}'")
+            # Split note into list using textwrap.wrap function
+            split_note = wrap(note.content, width=90)
+
+            print(f"{str(pos):<4}<{note.category+'>':15}", end='')
+            for pos, line in enumerate(split_note):
+                if pos == 0:
+                    print(f"'{line}'")
+                else:
+                    print(f"{' ' * 20}'{line}'") # Pad with spaces
 
         # Display limit for notes
         if pos == limit:
@@ -230,6 +255,7 @@ cmd_dict = {
     'exit': 'Exit Python Notes                (alt: q, quit)'
     }
 
+cat_list = [] # List of categories
 pyn_notes = load_notes() # This is where we load our notes into memory
 
 # MAIN LOOP ====================================================================
@@ -285,4 +311,5 @@ while True:
         if autosave == True:
             print("Saving changes and exiting...")
             save_notes()
+        sleep(exit_delay)
         sys.exit(0)
