@@ -2,7 +2,7 @@
 # //     // //|//  Notes
 #
 # Simple and fast notetaking app for remembering things
-# Created by Dan Spencer (2020)
+# Created by Dan Spencer (2020) for Windows
 
 import os, sys, csv
 from secrets import token_hex
@@ -77,7 +77,7 @@ def load_notes():
     return notes
 
 
-def save_notes(filename=csv_filename, backup_on_save=False):
+def save_notes(filename=csv_filename, backup_on_save=True):
     """Save notes to csv file; Use filename kwarg to save to another file."""
 
     if backup_on_save == True:
@@ -285,17 +285,31 @@ def sort_notes(sort_by=default_sort):
     return f"Notes have been sorted by {sort_by}!"
 
 
-cmd_dict = {
-    'help': 'Display all available commands   (alt: h)',
-    'add':  'Create a new note                (alt: a, new)',
-    'del':  'Delete an existing note          (alt: x, delete)',
-    'edit': 'Edit an existing note            (alt: e)',
-    'save': 'Save notes to csv file           (alt: s)',
-    'view': 'View basic info of saved notes   (alt: v <category>)',
-    'disp': 'Display all info for saved notes (alt: d, display)',
-    'sort': 'Sort notes by date or category   (alt: o <sort_by>',
-    'exit': 'Exit Python Notes                (alt: q, quit)'
+def pyn_help():
+    """Display the list of commands."""
+
+    os.system('cls')
+    print(title)
+    print("Command list\n")
+
+    cmd_dict = {
+        'help': 'Display all available commands   (alt: h)',
+        'add':  'Create a new note                (alt: a, new)',
+        'del':  'Delete an existing note          (alt: x, delete)',
+        'edit': 'Edit an existing note            (alt: e)',
+        'save': 'Save notes to csv file           (alt: s)',
+        'view': 'View basic info of saved notes   (alt: v <category>)',
+        'disp': 'Display all info for saved notes (alt: d, display)',
+        'sort': 'Sort notes by date or category   (alt: o <sort_by>',
+        'exit': 'Exit Python Notes                (alt: q, quit)'
     }
+
+    for cmd, desc in cmd_dict.items():
+        print(f"{cmd.upper() + ':':<8}{desc}")
+
+    print() # Blank line
+    input("Press ENTER to continue...") # Wait for user to press Enter key
+
 
 cat_list = [] # List of categories
 pyn_notes = load_notes() # This is where we load our notes into memory
@@ -333,9 +347,7 @@ while True:
 
     # Otherwise use standard single argument commands
     elif command.lower() in ['help', 'h']:
-        for cmd, desc in cmd_dict.items():
-            print(f"{cmd.upper() + ':':<8}{desc}")
-        input("Press ENTER to continue...") # Wait for user to press Enter key
+        pyn_help()
     elif command.lower() in ['add', 'a', 'new']:
         status = add_note()
     elif command.lower() in ['del', 'x', 'delete']:
