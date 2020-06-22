@@ -115,6 +115,9 @@ def add_note(sort_on_add=True):
     clear_disp("Create a new note...")
 
     content = input(prompt)
+    if content == '':
+        return "Note was not created. Cannot be blank."
+
     category = cat_note()
     hex_id = token_hex(4)
     date = datetime.today().strftime("%m-%d-%y %H:%M")
