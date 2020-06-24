@@ -11,11 +11,11 @@ from textwrap import wrap
 from time import sleep
 
 
-csv_filename = './pynotes.csv'
-csv_bak_dir = './backup'
-csv_bak_filename = os.path.join(csv_bak_dir, './pynotes_bak1.csv') # Backup file
-csv_bak_exit_fn = os.path.join(csv_bak_dir, './pynotes_bak2.csv')
-csv_fieldnames = ['id', 'date', 'category', 'content']
+title = r"""  
+ //)) \\// /| // Python
+//     // //|//  Notes
+"""
+prompt = '>>> '
 
 autosave = True
 backup_on_exit = True
@@ -25,11 +25,35 @@ status = None # Initial status message
 default_sort = 'date' # The method of sorting on startup and when adding a note
 exit_delay = 1.5
 
-title = r"""  
- //)) \\// /| // Python
-//     // //|//  Notes
-"""
-prompt = '>>> '
+csv_bak_dir = './backup/'
+csv_bak_filename = os.path.join(csv_bak_dir, 'pyn_bak1.csv')
+csv_bak_exit_fn = os.path.join(csv_bak_dir, 'pyn_bak2.csv')
+csv_fieldnames = ['id', 'date', 'category', 'content']
+
+try:
+    # Set csv_filename from cmd-line arg if it exists
+    if len(sys.argv) == 2 and os.path.isfile(sys.argv[1]):
+        csv_filename = sys.argv[1]
+    else:
+        csv_filename = 'pyn_default.csv' # Default file
+except Exception as e:
+    print("Exception occurred while getting csv filename:", e)
+    sys.exit(1)
+
+try:
+    # Check if csv file exists; If not, create a new file with headers
+    if not os.path.isfile(csv_filename):
+        with open(csv_filename, 'w', newline='') as csvfile:
+            writer = csv.DictWriter(csvfile, fieldnames=csv_fieldnames)
+            writer.writeheader()
+            status = f"Created new csv file named '{csv_filename.split('/')[1]}'"
+
+    # Check if backup directory exists; Create one if necessary
+    if not os.path.exists(csv_bak_dir):
+        os.mkdir(csv_bak_dir)
+except Exception as e:
+    print("Exception occurred while creating new csv file or dir:", e)
+    sys.exit(1)
 
 
 class Note:
@@ -49,24 +73,12 @@ class Note:
                 f"category={self.category}, content={self.content}")
 
 
-# Check if csv file exists; If not, create a new file with headers
-if not os.path.isfile(csv_filename):
-    with open(csv_filename, 'w', newline='') as csvfile:
-        writer = csv.DictWriter(csvfile, fieldnames=csv_fieldnames)
-        writer.writeheader()
-        status = f"Created new csv file named '{csv_filename.split('/')[1]}'"
-
-# Check if backup directory exists; Create one if necessary
-if not os.path.exists(csv_bak_dir):
-    os.mkdir(csv_bak_dir)
-
-
-def load_notes():
+def load_notes(filename=csv_filename):
     """Load notes from csv file as Note class-objects.
         Returns list of Note objects."""
 
     notes = []
-    with open(csv_filename, 'r') as csvfile:
+    with open(filename, 'r') as csvfile:
         reader = csv.DictReader(csvfile, fieldnames=csv_fieldnames)
 
         next(reader) # Skip header
@@ -76,6 +88,8 @@ def load_notes():
             if note['category'].lower() not in cat_list:
                 cat_list.append(note['category'].lower()) # Fill category list
 
+    global status
+    status = f"Notes were loaded from '{filename}' successfully!"
     return notes
 
 
@@ -96,7 +110,7 @@ def save_notes(filename=csv_filename, backup_on_save=True):
 
     global changes_saved
     changes_saved = True
-    return "Changes to notes have been saved!"
+    return f"Changes to notes file '{filename}' have been saved!"
 
 
 def backup_notes(filename=csv_bak_filename):
@@ -326,7 +340,7 @@ def pyn_help():
         'add':  'Create a new note                (alt: a, new)',
         'del':  'Delete an existing note          (alt: x, delete)',
         'edit': 'Edit an existing note            (alt: e)',
-        'save': 'Save notes to csv file           (alt: s)',
+        'save': 'Save notes to csv file           (alt: s <filename>)',
         'view': 'View basic info of saved notes   (alt: v <category>)',
         'disp': 'Display all info for saved notes (alt: d, display)',
         'sort': 'Sort notes by date or category   (alt: o <sort_by>',
@@ -354,25 +368,26 @@ while True:
     if auto_view_notes == True:
         view_notes(enter=False, limit=18)
 
-    # Use a default status message that displays help text
-    if status == None:
-        status = "Enter a command. Type HELP for a list of commands."
-
     # Print a different status message depending on if changes are saved
     status_saved = f"Status: {status}"
     status_unsaved = f"Status (Unsaved): {status}"
     print(status_saved if changes_saved == True else status_unsaved)
-    status = None # Reset status msg
+    # Reset status msg to default
+    status = "Enter a command. Type HELP for a list of commands."
 
     command = input(prompt) # Get a command from user
 
     # Check if command has multiple arguments
     if len(command.split()) > 1:
         command = command.split()
+        cmd_len = len(command)
 
-        if command[0].lower() in ['view', 'v'] and len(command) == 2:
+        if command[0].lower() in ['save', 's'] and cmd_len == 2:
+            save_fn = command[1] + '.csv'
+            status = save_notes(filename=save_fn, backup_on_save=True)
+        elif command[0].lower() in ['view', 'v'] and cmd_len == 2:
             view_notes(cat=command[1])
-        elif command[0].lower() in ['sort', 'o'] and len(command) == 2:
+        elif command[0].lower() in ['sort', 'o'] and cmd_len == 2:
             status = sort_notes(sort_by=command[1])
         else:
             status = "The command or number of arguments given was invalid."
