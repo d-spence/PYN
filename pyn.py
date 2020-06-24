@@ -20,6 +20,8 @@ csv_fieldnames = ['id', 'date', 'category', 'content']
 autosave = True
 backup_on_exit = True
 auto_view_notes = True # Notes are displayed automatically
+changes_saved = True # Track if a file has been saved after changes are made
+status = None # Initial status message
 default_sort = 'date' # The method of sorting on startup and when adding a note
 exit_delay = 1.5
 
@@ -27,7 +29,6 @@ title = r"""
  //)) \\// /| // Python
 //     // //|//  Notes
 """
-status = None # Initial status message
 prompt = '>>> '
 
 
@@ -93,6 +94,8 @@ def save_notes(filename=csv_filename, backup_on_save=True):
                     'category': note.category, 'content': note.content})
             writer.writerow(row)
 
+    global changes_saved
+    changes_saved = True
     return "Changes to notes have been saved!"
 
 
@@ -128,7 +131,9 @@ def add_note(sort_on_add=True):
     if sort_on_add == True:
         sort_notes() # Sort list of notes
 
-    # Return a status message
+    # Set changes_saved variable to false and return status message
+    global changes_saved
+    changes_saved = False
     return f"Created new note in '{category}' category with ID '{hex_id}'"
     
 
@@ -144,6 +149,9 @@ def del_note():
         if 0 <= note_index < len(pyn_notes):
             if del_note_confirm(note_index):
                 del pyn_notes[note_index]
+
+                global changes_saved
+                changes_saved = False
                 return f"Note {note_index + 1} was deleted..."
             else:
                 raise Exception
@@ -186,6 +194,8 @@ def edit_note():
             pyn_notes[note_index].content = edit_text
             pyn_notes[note_index].category = edit_cat
 
+            global changes_saved
+            changes_saved = False
             return f"Note {note_index} was modified successfully!"
     except Exception:
         return "Could not edit note. Please use a valid index."
@@ -293,6 +303,8 @@ def sort_notes(sort_by=default_sort):
     else:
         return f"Notes could not be sorted by '{sort_by}'..."
 
+    global changes_saved
+    changes_saved = False
     return f"Notes have been sorted by {sort_by}!"
 
 
@@ -330,7 +342,6 @@ def pyn_help():
 
 cat_list = [] # List of categories
 pyn_notes = load_notes() # This is where we load our notes into memory
-sort_notes() # Sort list of notes by default setting
 
 # MAIN LOOP ====================================================================
 while True:
@@ -341,12 +352,16 @@ while True:
 
     # View notes automatically
     if auto_view_notes == True:
-        view_notes(enter=False, limit=20)
+        view_notes(enter=False, limit=18)
 
     # Use a default status message that displays help text
     if status == None:
         status = "Enter a command. Type HELP for a list of commands."
-    print(f"Status: {status}")
+
+    # Print a different status message depending on if changes are saved
+    status_saved = f"Status: {status}"
+    status_unsaved = f"Status (Unsaved): {status}"
+    print(status_saved if changes_saved == True else status_unsaved)
     status = None # Reset status msg
 
     command = input(prompt) # Get a command from user
